@@ -31,29 +31,96 @@ for (let i = 0; i < story.scenes.length; i += 1) {
   audioScenes.push({ index:i, file, duration:probe(file) });
 }
 
-fs.writeFileSync("audio/concat.txt", audioScenes.map((item) => "file \'" + item.file + "\'").join("\n") + "\n");
-execFileSync("ffmpeg", ["-y","-f","concat","-safe","0","-i","audio/concat.txt","-c:a","pcm_s16le","audio/narration.wav"], { stdio:"inherit" });
-const narrationDuration = probe("audio/narration.wav");
-
 const intro = story.introDuration;
 const tail = story.tailDuration;
 const overlap = story.transitionDuration;
 const effectHold = story.effectHoldDuration ?? 0.7;
-let cursor = intro;
+
+// Normalize every TTS clip so the concat demuxer can safely insert deterministic silence.
+const normalized = [];
+for (const item of audioScenes) {
+  const output = "audio/normalized-" + String(item.index).padStart(2, "0") + ".wav";
+  execFileSync("ffmpeg", ["-y","-i",item.file,"-ar","48000","-ac","2","-c:a","pcm_s16le",output], { stdio:"inherit" });
+  normalized.push({ ...item, file:output });
+}
+
+const silenceFile = "audio/transition-silence.wav";
+execFileSync(
+  "ffmpeg",
+  ["-y","-f","lavfi","-i","anullsrc=r=48000:cl=stereo","-t",String(overlap),"-c:a","pcm_s16le",silenceFile],
+  { stdio:"inherit" }
+);
+
+const concatEntries = [];
+for (let i = 0; i < normalized.length; i += 1) {
+  concatEntries.push("file '" + normalized[i].file + "'");
+  if (i < normalized.length - 1) concatEntries.push("file '" + silenceFile + "'");
+}
+fs.writeFileSync("audio/concat.txt", concatEntries.join("\n") + "\n");
+execFileSync("ffmpeg", ["-y","-f","concat","-safe","0","-i","audio/concat.txt","-c:a","pcm_s16le","audio/narration.wav"], { stdio:"inherit" });
+const narrationDuration = probe("audio/narration.wav");
+
+// Timing contract:
+// scene narration ends -> dissolve starts -> dissolve ends -> next narration starts.
+const firstNarrationStart = intro + overlap;
+let cursor = firstNarrationStart;
+const lastNarratedIndex = audioScenes.at(-1)?.index ?? -1;
 const timings = [];
 for (let i = 0; i < story.scenes.length; i += 1) {
   const scene = story.scenes[i];
   if (!scene.narration) {
-    timings.push({ index:i, id:scene.id, audioStart:0, audioDuration:intro, audioEnd:intro, visualStart:0, visualEnd:intro + overlap });
+    timings.push({
+      index:i,
+      id:scene.id,
+      audioStart:0,
+      audioDuration:intro,
+      audioEnd:intro,
+      visualStart:0,
+      visualEnd:intro + overlap,
+      transitionStart:intro,
+      transitionEnd:intro + overlap
+    });
     continue;
   }
+
   const audio = audioScenes.find((item) => item.index === i);
   const audioStart = cursor;
   const audioEnd = audioStart + audio.duration;
-  timings.push({ index:i, id:scene.id, audioStart, audioDuration:audio.duration, audioEnd, visualStart:Math.max(0,audioStart-overlap), visualEnd:audioEnd+overlap });
-  cursor = audioEnd;
+  const isLast = i === lastNarratedIndex;
+  const transitionStart = audioEnd;
+  const transitionEnd = isLast ? audioEnd : audioEnd + overlap;
+
+  timings.push({
+    index:i,
+    id:scene.id,
+    audioStart,
+    audioDuration:audio.duration,
+    audioEnd,
+    visualStart:audioStart - overlap,
+    visualEnd:isLast ? audioEnd + tail : transitionEnd,
+    transitionStart,
+    transitionEnd,
+    isLast
+  });
+
+  cursor = isLast ? audioEnd : transitionEnd;
 }
-const totalDuration = intro + narrationDuration + tail;
+
+const narratedTimings = timings.filter((item) => story.scenes[item.index].narration);
+for (let i = 1; i < narratedTimings.length; i += 1) {
+  const previous = narratedTimings[i - 1];
+  const current = narratedTimings[i];
+  const gap = current.audioStart - previous.audioEnd;
+  if (Math.abs(gap - overlap) > 0.03) {
+    throw new Error(
+      "Narration/transition timing invariant failed: " +
+      previous.id + " -> " + current.id +
+      " gap=" + gap.toFixed(3) + " expected=" + overlap.toFixed(3)
+    );
+  }
+}
+const lastTiming = narratedTimings.at(-1);
+const totalDuration = (lastTiming?.audioEnd ?? firstNarrationStart) + tail;
 
 const captions = [];
 for (const timing of timings) {
@@ -88,9 +155,10 @@ for (const t of timings) {
   const scene = story.scenes[t.index];
   const c = scene.camera;
   const dur = t.visualEnd - t.visualStart;
-  const fade = Math.min(overlap, dur/3);
+  const fadeIn = Math.min(overlap, Math.max(0, t.audioStart - t.visualStart) || overlap);
+  const fadeOut = t.isLast ? Math.min(1.5, tail) : overlap;
   const id = "#" + scene.id;
-  motion.push('tl.to("'+id+'",{opacity:1,duration:'+fade.toFixed(3)+',ease:"power2.out"},'+t.visualStart.toFixed(3)+');');
+  motion.push('tl.to("'+id+'",{opacity:1,duration:'+fadeIn.toFixed(3)+',ease:"power2.out"},'+t.visualStart.toFixed(3)+');');
   motion.push('tl.fromTo("'+id+' .photo",{scale:'+c.fromScale+',x:'+c.fromX+',y:'+c.fromY+',transformOrigin:"'+c.origin+'"},{scale:'+c.toScale+',x:'+c.toX+',y:'+c.toY+',duration:'+dur.toFixed(3)+',ease:"sine.inOut"},'+t.visualStart.toFixed(3)+');');
   if (["gold","transformation"].includes(scene.mood)) {
     motion.push('tl.fromTo("'+id+' .gold-aura",{opacity:0},{opacity:.76,duration:2.1,ease:"power2.out"},'+t.visualStart.toFixed(3)+');');
@@ -106,7 +174,10 @@ for (const t of timings) {
     motion.push('tl.fromTo("'+id+' .camera",{x:-7,y:5,rotation:-0.18},{x:7,y:-5,rotation:.18,duration:.075,repeat:10,yoyo:true,ease:"sine.inOut"},'+transformAt.toFixed(3)+');');
     motion.push('tl.to("'+id+' .camera",{x:0,y:0,rotation:0,duration:.36,ease:"power2.out"},'+(transformAt+.9).toFixed(3)+');');
   }
-  motion.push('tl.to("'+id+'",{opacity:0,duration:'+fade.toFixed(3)+',ease:"power2.in"},'+Math.max(t.visualStart,t.visualEnd-fade).toFixed(3)+');');
+  const fadeOutStart = t.isLast
+    ? t.audioEnd + Math.max(0, tail - fadeOut)
+    : t.audioEnd;
+  motion.push('tl.to("'+id+'",{opacity:0,duration:'+fadeOut.toFixed(3)+',ease:"power2.inOut"},'+fadeOutStart.toFixed(3)+');');
 }
 for (const c of captions) {
   const f=Math.min(.22,c.duration/4);
@@ -158,7 +229,7 @@ const css = `
 .mood-bite .vignette{background:radial-gradient(circle at 63% 72%,transparent 35%,rgba(0,0,0,.54) 100%)}
 `;
 
-const doc = '<!doctype html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=1080,height=1920"><title>'+html(story.title)+'</title><script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@hyperframes/core/dist/hyperframe.runtime.iife.js"></script><style>'+css+'</style></head><body><div id="stage" data-composition-id="hyeonu-taemong" data-start="0" data-width="1080" data-height="1920" data-duration="'+totalDuration.toFixed(3)+'" data-fps="30">'+scenesHtml+'<div id="cover-title"><span id="cover-kicker">A DREAM BEFORE WE MET</span>'+html(story.title)+'</div>'+'<div id="caption-dim"></div>'+captionsHtml+'<div id="moon-bloom"></div><div id="dream-glow"></div><div id="impact-flash"></div><div id="white-flash"></div><div id="warm-dissolve"></div><audio id="narration" data-start="'+intro.toFixed(3)+'" data-duration="'+narrationDuration.toFixed(3)+'" data-track-index="8" data-volume="1" src="./audio/narration.wav"></audio></div><script>const tl=gsap.timeline({paused:true});tl.fromTo("#cover-title",{opacity:0,y:22},{opacity:1,y:0,duration:.9,ease:"power2.out"},.25);tl.to("#cover-title",{opacity:0,y:-10,duration:.75,ease:"power2.in"},'+Math.max(.5,intro-.65).toFixed(3)+');tl.fromTo("#moon-bloom",{opacity:.08},{opacity:.34,duration:1.6,yoyo:true,repeat:1,ease:"sine.inOut"},.2);'+motion.join("")+'window.__timelines=window.__timelines||{};window.__timelines["hyeonu-taemong"]=tl;</script></body></html>';
+const doc = '<!doctype html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=1080,height=1920"><title>'+html(story.title)+'</title><script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@hyperframes/core/dist/hyperframe.runtime.iife.js"></script><style>'+css+'</style></head><body><div id="stage" data-composition-id="hyeonu-taemong" data-start="0" data-width="1080" data-height="1920" data-duration="'+totalDuration.toFixed(3)+'" data-fps="30">'+scenesHtml+'<div id="cover-title"><span id="cover-kicker">A DREAM BEFORE WE MET</span>'+html(story.title)+'</div>'+'<div id="caption-dim"></div>'+captionsHtml+'<div id="moon-bloom"></div><div id="dream-glow"></div><div id="impact-flash"></div><div id="white-flash"></div><div id="warm-dissolve"></div><audio id="narration" data-start="'+firstNarrationStart.toFixed(3)+'" data-duration="'+narrationDuration.toFixed(3)+'" data-track-index="8" data-volume="1" src="./audio/narration.wav"></audio></div><script>const tl=gsap.timeline({paused:true});tl.fromTo("#cover-title",{opacity:0,y:22},{opacity:1,y:0,duration:.9,ease:"power2.out"},.25);tl.to("#cover-title",{opacity:0,y:-10,duration:.75,ease:"power2.in"},'+Math.max(.5,intro-.65).toFixed(3)+');tl.fromTo("#moon-bloom",{opacity:.08},{opacity:.34,duration:1.6,yoyo:true,repeat:1,ease:"sine.inOut"},.2);'+motion.join("")+'window.__timelines=window.__timelines||{};window.__timelines["hyeonu-taemong"]=tl;</script></body></html>';
 fs.writeFileSync("index.html", doc);
 fs.writeFileSync("timeline.json", JSON.stringify({ totalDuration, narrationDuration, timings, captions }, null, 2));
 console.log("Built HyperFrames composition: " + totalDuration.toFixed(2) + "s, captions=" + captions.length);
