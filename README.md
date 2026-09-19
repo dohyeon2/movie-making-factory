@@ -14,7 +14,7 @@ HyperFrames 기반 영상 렌더링 저장소입니다.
 4. 자막 타이밍 + 1.15초 장면 오버랩을 계산해 HyperFrames composition 생성
 5. HyperFrames `lint` / `check`
 6. 1080x1920 / 30fps / high quality MP4 렌더
-7. GitHub Actions artifact 업로드
+7. `hyeonu-taemong-<run number>` 태그로 GitHub Release 생성하고 MP4 첨부
 
 단순 컷 대신 slow zoom, pan, crop, bite impact shake, moon bloom, warm dissolve, white flash, golden aura/particle, ending multi-stage camera move를 사용합니다.
 
@@ -32,5 +32,7 @@ Repository Settings > Secrets and variables > Actions에 다음을 추가하세�
 ## 실행
 
 Actions에서 `Render Hyeonu Taemong` workflow를 수동 실행합니다.
+
+완료되면 Actions artifact 대신 repository Releases에서 `hyeonu-taemong.mp4`를 받을 수 있습니다.
 
 HyperFrames CLI는 Node.js 22+와 FFmpeg를 사용하며 이 저장소는 `hyperframes@0.8.50`으로 고정했습니다.
