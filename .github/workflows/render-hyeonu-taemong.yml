@@ -9,7 +9,7 @@ on:
         default: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   render:
@@ -60,13 +60,9 @@ jobs:
           mkdir -p renders
           npx -y hyperframes@0.8.50 render . --output renders/hyeonu-taemong.mp4 --quality high --fps 30
 
-      - name: Upload render artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: hyeonu-taemong
-          path: |
-            renders/hyeonu-taemong.mp4
-            index.html
-            timeline.json
-          if-no-files-found: error
-          retention-days: 14
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="hyeonu-taemong-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG"             renders/hyeonu-taemong.mp4             --target "$GITHUB_SHA"             --title "현우의 태몽 #${GITHUB_RUN_NUMBER}"             --notes "HyperFrames + OpenAI TTS 자동 렌더링 결과입니다. Workflow run: #${GITHUB_RUN_NUMBER}"
