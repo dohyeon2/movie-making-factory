@@ -16,7 +16,7 @@ HyperFrames 기반 영상 렌더링 저장소입니다.
 6. 1080x1920 / 30fps / high quality MP4 렌더
 7. `hyeonu-taemong-<run number>` 태그로 GitHub Release 생성하고 MP4 첨부
 
-단순 컷 대신 slow zoom, pan, crop, bite impact shake, moon bloom, warm dissolve, white flash, golden aura/particle, ending multi-stage camera move를 사용합니다. 전환 효과에는 0.7초 hold를 두어 빛과 디졸브가 바로 끊기지 않도록 했습니다.
+단순 컷 대신 slow zoom, pan, crop, bite impact shake, moon bloom, warm dissolve, white flash, golden aura/particle, ending multi-stage camera move를 사용합니다. 전환 효과에는 0.7초 hold를 두어 빛과 디졸브가 바로 끊기지 않도록 했습니다.\n\n장면 전환 타이밍은 `씬 나래이션 종료 → 2.2초 디졸브 → 다음 씬 나래이션 시작` 순서를 강제합니다.
 
 ## GitHub Actions secrets
 
