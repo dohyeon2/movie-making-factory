@@ -1,0 +1,11 @@
+{
+  "name": "movie-making-factory",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync-assets": "node scripts/sync-nextcloud.mjs",
+    "tts": "node scripts/generate-tts.mjs",
+    "build": "node scripts/build-composition.mjs",
+    "render": "npx -y hyperframes@0.8.50 render . --output renders/hyeonu-taemong.mp4 --quality high --fps 30"
+  }
+}
