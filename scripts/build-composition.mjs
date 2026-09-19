@@ -38,6 +38,7 @@ const narrationDuration = probe("audio/narration.wav");
 const intro = story.introDuration;
 const tail = story.tailDuration;
 const overlap = story.transitionDuration;
+const effectHold = story.effectHoldDuration ?? 0.4;
 let cursor = intro;
 const timings = [];
 for (let i = 0; i < story.scenes.length; i += 1) {
@@ -92,7 +93,8 @@ for (const t of timings) {
   motion.push('tl.to("'+id+'",{opacity:1,duration:'+fade.toFixed(3)+',ease:"power2.out"},'+t.visualStart.toFixed(3)+');');
   motion.push('tl.fromTo("'+id+' .photo",{scale:'+c.fromScale+',x:'+c.fromX+',y:'+c.fromY+',transformOrigin:"'+c.origin+'"},{scale:'+c.toScale+',x:'+c.toX+',y:'+c.toY+',duration:'+dur.toFixed(3)+',ease:"sine.inOut"},'+t.visualStart.toFixed(3)+');');
   if (["gold","transformation"].includes(scene.mood)) {
-    motion.push('tl.fromTo("'+id+' .gold-aura",{opacity:0},{opacity:.76,duration:1.1,ease:"power2.out"},'+t.visualStart.toFixed(3)+');');
+    motion.push('tl.fromTo("'+id+' .gold-aura",{opacity:0},{opacity:.76,duration:1.55,ease:"power2.out"},'+t.visualStart.toFixed(3)+');');
+    motion.push('tl.to("'+id+' .gold-aura",{opacity:.76,duration:'+effectHold.toFixed(3)+'},'+(t.visualStart+1.55).toFixed(3)+');');
   }
   if (scene.mood === "bite") {
     const biteAt = t.audioStart + t.audioDuration*0.48;
@@ -108,13 +110,17 @@ for (const c of captions) {
 }
 
 const s6=timings.find((x)=>x.id==="scene-6"), s7=timings.find((x)=>x.id==="scene-7"), ending=timings.find((x)=>x.id==="ending");
-if (s6) motion.push('tl.fromTo("#dream-glow",{opacity:0},{opacity:.38,duration:1.4,ease:"sine.inOut"},'+s6.visualStart.toFixed(3)+');');
+if (s6) motion.push('tl.fromTo("#dream-glow",{opacity:0},{opacity:.38,duration:1.8,ease:"sine.inOut"},'+s6.visualStart.toFixed(3)+');');
 if (s7) {
-  motion.push('tl.to("#dream-glow",{opacity:.75,duration:1.0,ease:"power2.inOut"},'+Math.max(0,s7.visualStart-.5).toFixed(3)+');');
-  motion.push('tl.fromTo("#white-flash",{opacity:0},{opacity:.98,duration:.24,yoyo:true,repeat:1,ease:"power2.inOut"},'+Math.max(0,s7.audioStart-.2).toFixed(3)+');');
+  motion.push('tl.to("#dream-glow",{opacity:.75,duration:1.35,ease:"power2.inOut"},'+Math.max(0,s7.visualStart-.75).toFixed(3)+');');
+  motion.push('tl.fromTo("#white-flash",{opacity:0},{opacity:.98,duration:.34,ease:"power2.inOut"},'+Math.max(0,s7.audioStart-.35).toFixed(3)+');');
+  motion.push('tl.to("#white-flash",{opacity:.98,duration:'+effectHold.toFixed(3)+'},'+Math.max(0,s7.audioStart-.01).toFixed(3)+');');
+  motion.push('tl.to("#white-flash",{opacity:0,duration:.5,ease:"power2.out"},'+(s7.audioStart+effectHold).toFixed(3)+');');
 }
 if (ending) {
-  motion.push('tl.fromTo("#warm-dissolve",{opacity:0},{opacity:.64,duration:.85,yoyo:true,repeat:1,ease:"sine.inOut"},'+Math.max(0,ending.visualStart-.2).toFixed(3)+');');
+  motion.push('tl.fromTo("#warm-dissolve",{opacity:0},{opacity:.64,duration:1.15,ease:"sine.inOut"},'+Math.max(0,ending.visualStart-.55).toFixed(3)+');');
+  motion.push('tl.to("#warm-dissolve",{opacity:.64,duration:'+effectHold.toFixed(3)+'},'+Math.max(0,ending.visualStart+.6).toFixed(3)+');');
+  motion.push('tl.to("#warm-dissolve",{opacity:0,duration:1.05,ease:"sine.out"},'+Math.max(0,ending.visualStart+.6+effectHold).toFixed(3)+');');
   motion.push('tl.to("#ending .photo",{scale:1.13,x:0,y:8,duration:'+(ending.audioDuration*.26).toFixed(3)+',ease:"sine.inOut"},'+ending.audioStart.toFixed(3)+');');
   motion.push('tl.to("#ending .photo",{scale:1.06,x:-8,y:-20,duration:'+(ending.audioDuration*.26).toFixed(3)+',ease:"sine.inOut"},'+(ending.audioStart+ending.audioDuration*.26).toFixed(3)+');');
   motion.push('tl.to("#ending .photo",{scale:1.12,x:0,y:-44,duration:'+(ending.audioDuration*.22).toFixed(3)+',ease:"sine.inOut"},'+(ending.audioStart+ending.audioDuration*.52).toFixed(3)+');');
