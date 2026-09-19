@@ -2,7 +2,7 @@
   "title": "현우의 태몽",
   "introDuration": 2.2,
   "tailDuration": 2,
-  "transitionDuration": 1.15,
+  "transitionDuration": 1.6,
   "voice": "marin",
   "ttsModel": "gpt-4o-mini-tts",
   "narrationInstructions": "한국어 동화책을 아이에게 읽어주는 젊은 여성 내레이터. 부드럽고 따뜻하며 몽환적이다. 일반 대화보다 약간 느리게 말한다. 문장과 문장 사이에는 자연스러운 여백을 둔다. 초반은 조용하고 신비롭게, 뱀이 나타날 때에는 약간의 긴장감을 주고, 금빛 균열부터는 두려움보다 경이로움을 표현한다. 바로 현우였다는 것을은 천천히 감정적으로 읽고, 엔딩은 가장 따뜻하고 편안하게 읽는다. 과장된 성우 연기나 광고 내레이션처럼 읽지 않는다.",
@@ -227,5 +227,6 @@
       },
       "mood": "ending"
     }
-  ]
+  ],
+  "effectHoldDuration": 0.4
 }
