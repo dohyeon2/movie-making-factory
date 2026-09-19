@@ -38,7 +38,7 @@ const narrationDuration = probe("audio/narration.wav");
 const intro = story.introDuration;
 const tail = story.tailDuration;
 const overlap = story.transitionDuration;
-const effectHold = story.effectHoldDuration ?? 0.4;
+const effectHold = story.effectHoldDuration ?? 0.7;
 let cursor = intro;
 const timings = [];
 for (let i = 0; i < story.scenes.length; i += 1) {
@@ -93,13 +93,18 @@ for (const t of timings) {
   motion.push('tl.to("'+id+'",{opacity:1,duration:'+fade.toFixed(3)+',ease:"power2.out"},'+t.visualStart.toFixed(3)+');');
   motion.push('tl.fromTo("'+id+' .photo",{scale:'+c.fromScale+',x:'+c.fromX+',y:'+c.fromY+',transformOrigin:"'+c.origin+'"},{scale:'+c.toScale+',x:'+c.toX+',y:'+c.toY+',duration:'+dur.toFixed(3)+',ease:"sine.inOut"},'+t.visualStart.toFixed(3)+');');
   if (["gold","transformation"].includes(scene.mood)) {
-    motion.push('tl.fromTo("'+id+' .gold-aura",{opacity:0},{opacity:.76,duration:1.55,ease:"power2.out"},'+t.visualStart.toFixed(3)+');');
-    motion.push('tl.to("'+id+' .gold-aura",{opacity:.76,duration:'+effectHold.toFixed(3)+'},'+(t.visualStart+1.55).toFixed(3)+');');
+    motion.push('tl.fromTo("'+id+' .gold-aura",{opacity:0},{opacity:.76,duration:2.1,ease:"power2.out"},'+t.visualStart.toFixed(3)+');');
+    motion.push('tl.to("'+id+' .gold-aura",{opacity:.76,duration:'+effectHold.toFixed(3)+'},'+(t.visualStart+2.1).toFixed(3)+');');
   }
   if (scene.mood === "bite") {
     const biteAt = t.audioStart + t.audioDuration*0.48;
-    motion.push('tl.to("'+id+' .camera",{x:13,y:-6,duration:.055,repeat:5,yoyo:true,ease:"none"},'+biteAt.toFixed(3)+');');
+    motion.push('tl.to("'+id+' .camera",{x:15,y:-8,duration:.055,repeat:6,yoyo:true,ease:"none"},'+biteAt.toFixed(3)+');');
     motion.push('tl.fromTo("#impact-flash",{opacity:0},{opacity:.88,duration:.08,yoyo:true,repeat:1,ease:"none"},'+biteAt.toFixed(3)+');');
+  }
+  if (scene.mood === "transformation") {
+    const transformAt = t.audioStart + t.audioDuration*0.34;
+    motion.push('tl.fromTo("'+id+' .camera",{x:-7,y:5,rotation:-0.18},{x:7,y:-5,rotation:.18,duration:.075,repeat:10,yoyo:true,ease:"sine.inOut"},'+transformAt.toFixed(3)+');');
+    motion.push('tl.to("'+id+' .camera",{x:0,y:0,rotation:0,duration:.36,ease:"power2.out"},'+(transformAt+.9).toFixed(3)+');');
   }
   motion.push('tl.to("'+id+'",{opacity:0,duration:'+fade.toFixed(3)+',ease:"power2.in"},'+Math.max(t.visualStart,t.visualEnd-fade).toFixed(3)+');');
 }
@@ -110,17 +115,17 @@ for (const c of captions) {
 }
 
 const s6=timings.find((x)=>x.id==="scene-6"), s7=timings.find((x)=>x.id==="scene-7"), ending=timings.find((x)=>x.id==="ending");
-if (s6) motion.push('tl.fromTo("#dream-glow",{opacity:0},{opacity:.38,duration:1.8,ease:"sine.inOut"},'+s6.visualStart.toFixed(3)+');');
+if (s6) motion.push('tl.fromTo("#dream-glow",{opacity:0},{opacity:.38,duration:2.3,ease:"sine.inOut"},'+s6.visualStart.toFixed(3)+');');
 if (s7) {
-  motion.push('tl.to("#dream-glow",{opacity:.75,duration:1.35,ease:"power2.inOut"},'+Math.max(0,s7.visualStart-.75).toFixed(3)+');');
+  motion.push('tl.to("#dream-glow",{opacity:.75,duration:2.0,ease:"power2.inOut"},'+Math.max(0,s7.visualStart-1.0).toFixed(3)+');');
   motion.push('tl.fromTo("#white-flash",{opacity:0},{opacity:.98,duration:.34,ease:"power2.inOut"},'+Math.max(0,s7.audioStart-.35).toFixed(3)+');');
   motion.push('tl.to("#white-flash",{opacity:.98,duration:'+effectHold.toFixed(3)+'},'+Math.max(0,s7.audioStart-.01).toFixed(3)+');');
   motion.push('tl.to("#white-flash",{opacity:0,duration:.5,ease:"power2.out"},'+(s7.audioStart+effectHold).toFixed(3)+');');
 }
 if (ending) {
-  motion.push('tl.fromTo("#warm-dissolve",{opacity:0},{opacity:.64,duration:1.15,ease:"sine.inOut"},'+Math.max(0,ending.visualStart-.55).toFixed(3)+');');
-  motion.push('tl.to("#warm-dissolve",{opacity:.64,duration:'+effectHold.toFixed(3)+'},'+Math.max(0,ending.visualStart+.6).toFixed(3)+');');
-  motion.push('tl.to("#warm-dissolve",{opacity:0,duration:1.05,ease:"sine.out"},'+Math.max(0,ending.visualStart+.6+effectHold).toFixed(3)+');');
+  motion.push('tl.fromTo("#warm-dissolve",{opacity:0},{opacity:.64,duration:2.2,ease:"sine.inOut"},'+Math.max(0,ending.visualStart-1.15).toFixed(3)+');');
+  motion.push('tl.to("#warm-dissolve",{opacity:.64,duration:'+effectHold.toFixed(3)+'},'+Math.max(0,ending.visualStart+1.05).toFixed(3)+');');
+  motion.push('tl.to("#warm-dissolve",{opacity:0,duration:1.5,ease:"sine.out"},'+Math.max(0,ending.visualStart+1.05+effectHold).toFixed(3)+');');
   motion.push('tl.to("#ending .photo",{scale:1.13,x:0,y:8,duration:'+(ending.audioDuration*.26).toFixed(3)+',ease:"sine.inOut"},'+ending.audioStart.toFixed(3)+');');
   motion.push('tl.to("#ending .photo",{scale:1.06,x:-8,y:-20,duration:'+(ending.audioDuration*.26).toFixed(3)+',ease:"sine.inOut"},'+(ending.audioStart+ending.audioDuration*.26).toFixed(3)+');');
   motion.push('tl.to("#ending .photo",{scale:1.12,x:0,y:-44,duration:'+(ending.audioDuration*.22).toFixed(3)+',ease:"sine.inOut"},'+(ending.audioStart+ending.audioDuration*.52).toFixed(3)+');');
@@ -137,8 +142,9 @@ const css = `
 .vignette{position:absolute;inset:0;z-index:4;background:radial-gradient(ellipse at 50% 45%,transparent 48%,rgba(3,5,12,.12) 70%,rgba(2,4,10,.48) 100%)}
 .grain{position:absolute;inset:-20%;z-index:5;opacity:.08;background:repeating-radial-gradient(circle at 20% 30%,rgba(255,255,255,.25) 0 1px,transparent 1px 4px);mix-blend-mode:soft-light;transform:rotate(7deg)}
 .caption{position:absolute;left:8%;right:8%;z-index:40;text-align:center;font-size:54px;line-height:1.42;font-weight:600;letter-spacing:-.03em;text-shadow:0 3px 16px rgba(0,0,0,.75),0 1px 3px rgba(0,0,0,.9);transform:translateY(8px)}
-.caption span{display:inline;padding:.16em .34em .22em;background:linear-gradient(90deg,rgba(2,4,10,.08),rgba(2,4,10,.34),rgba(2,4,10,.08));border-radius:18px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
-.caption-bottom{bottom:122px}.caption-top{top:116px}
+.caption span{display:inline;padding:.16em .10em .22em;background:none;border-radius:0;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.caption-bottom{bottom:122px}.caption-top{bottom:122px;top:auto}
+#caption-dim{position:absolute;left:0;right:0;bottom:0;height:460px;z-index:20;pointer-events:none;background:linear-gradient(to top,rgba(2,4,10,.82) 0%,rgba(2,4,10,.62) 34%,rgba(2,4,10,.30) 62%,rgba(2,4,10,.08) 82%,transparent 100%)}
 #cover-title{position:absolute;left:0;right:0;bottom:175px;z-index:30;text-align:center;font-family:"Noto Serif KR",serif;font-size:112px;line-height:1.08;font-weight:700;letter-spacing:-.045em;color:#fff9ed;text-shadow:0 6px 34px rgba(0,0,0,.62),0 0 28px rgba(255,218,151,.22)}
 #cover-kicker{display:block;margin-bottom:22px;font-family:"Noto Sans KR",sans-serif;font-size:24px;font-weight:500;letter-spacing:.18em;opacity:.72}
 #white-flash,#impact-flash,#warm-dissolve,#dream-glow,#moon-bloom{position:absolute;inset:0;z-index:32;pointer-events:none;opacity:0}
@@ -152,7 +158,7 @@ const css = `
 .mood-bite .vignette{background:radial-gradient(circle at 63% 72%,transparent 35%,rgba(0,0,0,.54) 100%)}
 `;
 
-const doc = '<!doctype html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=1080,height=1920"><title>'+html(story.title)+'</title><script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@hyperframes/core/dist/hyperframe.runtime.iife.js"></script><style>'+css+'</style></head><body><div id="stage" data-composition-id="hyeonu-taemong" data-start="0" data-width="1080" data-height="1920" data-duration="'+totalDuration.toFixed(3)+'" data-fps="30">'+scenesHtml+'<div id="cover-title"><span id="cover-kicker">A DREAM BEFORE WE MET</span>'+html(story.title)+'</div>'+captionsHtml+'<div id="moon-bloom"></div><div id="dream-glow"></div><div id="impact-flash"></div><div id="white-flash"></div><div id="warm-dissolve"></div><audio id="narration" data-start="'+intro.toFixed(3)+'" data-duration="'+narrationDuration.toFixed(3)+'" data-track-index="8" data-volume="1" src="./audio/narration.wav"></audio></div><script>const tl=gsap.timeline({paused:true});tl.fromTo("#cover-title",{opacity:0,y:22},{opacity:1,y:0,duration:.9,ease:"power2.out"},.25);tl.to("#cover-title",{opacity:0,y:-10,duration:.75,ease:"power2.in"},'+Math.max(.5,intro-.65).toFixed(3)+');tl.fromTo("#moon-bloom",{opacity:.08},{opacity:.34,duration:1.6,yoyo:true,repeat:1,ease:"sine.inOut"},.2);'+motion.join("")+'window.__timelines=window.__timelines||{};window.__timelines["hyeonu-taemong"]=tl;</script></body></html>';
+const doc = '<!doctype html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=1080,height=1920"><title>'+html(story.title)+'</title><script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@hyperframes/core/dist/hyperframe.runtime.iife.js"></script><style>'+css+'</style></head><body><div id="stage" data-composition-id="hyeonu-taemong" data-start="0" data-width="1080" data-height="1920" data-duration="'+totalDuration.toFixed(3)+'" data-fps="30">'+scenesHtml+'<div id="cover-title"><span id="cover-kicker">A DREAM BEFORE WE MET</span>'+html(story.title)+'</div>'+'<div id="caption-dim"></div>'+captionsHtml+'<div id="moon-bloom"></div><div id="dream-glow"></div><div id="impact-flash"></div><div id="white-flash"></div><div id="warm-dissolve"></div><audio id="narration" data-start="'+intro.toFixed(3)+'" data-duration="'+narrationDuration.toFixed(3)+'" data-track-index="8" data-volume="1" src="./audio/narration.wav"></audio></div><script>const tl=gsap.timeline({paused:true});tl.fromTo("#cover-title",{opacity:0,y:22},{opacity:1,y:0,duration:.9,ease:"power2.out"},.25);tl.to("#cover-title",{opacity:0,y:-10,duration:.75,ease:"power2.in"},'+Math.max(.5,intro-.65).toFixed(3)+');tl.fromTo("#moon-bloom",{opacity:.08},{opacity:.34,duration:1.6,yoyo:true,repeat:1,ease:"sine.inOut"},.2);'+motion.join("")+'window.__timelines=window.__timelines||{};window.__timelines["hyeonu-taemong"]=tl;</script></body></html>';
 fs.writeFileSync("index.html", doc);
 fs.writeFileSync("timeline.json", JSON.stringify({ totalDuration, narrationDuration, timings, captions }, null, 2));
 console.log("Built HyperFrames composition: " + totalDuration.toFixed(2) + "s, captions=" + captions.length);
