@@ -51,12 +51,15 @@ execFileSync(
   { stdio:"inherit" }
 );
 
+const concatDir = path.resolve("audio");
 const concatEntries = [];
 for (let i = 0; i < normalized.length; i += 1) {
-  concatEntries.push("file '" + normalized[i].file + "'");
-  if (i < normalized.length - 1) concatEntries.push("file '" + silenceFile + "'");
+  concatEntries.push("file '" + path.basename(normalized[i].file) + "'");
+  if (i < normalized.length - 1) {
+    concatEntries.push("file '" + path.basename(silenceFile) + "'");
+  }
 }
-fs.writeFileSync("audio/concat.txt", concatEntries.join("\n") + "\n");
+fs.writeFileSync(path.join(concatDir, "concat.txt"), concatEntries.join("\n") + "\n");
 execFileSync("ffmpeg", ["-y","-f","concat","-safe","0","-i","audio/concat.txt","-c:a","pcm_s16le","audio/narration.wav"], { stdio:"inherit" });
 const narrationDuration = probe("audio/narration.wav");
 
