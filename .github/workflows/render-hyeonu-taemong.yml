@@ -1,0 +1,72 @@
+name: Render Hyeonu Taemong
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_tts:
+        description: Regenerate TTS even when cached audio exists
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      NEXTCLOUD_BASE_URL: ${{ secrets.NEXTCLOUD_BASE_URL }}
+      NEXTCLOUD_USERNAME: ${{ secrets.NEXTCLOUD_USERNAME }}
+      NEXTCLOUD_APP_PASSWORD: ${{ secrets.NEXTCLOUD_APP_PASSWORD }}
+      NEXTCLOUD_FOLDER: /현우/현우의 태몽
+      FORCE_TTS: ${{ inputs.force_tts && '1' || '0' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Sync storyboard images from Nextcloud
+        run: node scripts/sync-nextcloud.mjs
+
+      - name: Generate GPT narration
+        run: node scripts/generate-tts.mjs
+
+      - name: Build HyperFrames composition
+        run: node scripts/build-composition.mjs
+
+      - name: HyperFrames doctor
+        run: npx -y hyperframes@0.8.50 doctor
+
+      - name: Lint HyperFrames project
+        run: npx -y hyperframes@0.8.50 lint .
+
+      - name: Check HyperFrames composition
+        run: npx -y hyperframes@0.8.50 check .
+
+      - name: Render MP4
+        run: |
+          mkdir -p renders
+          npx -y hyperframes@0.8.50 render . --output renders/hyeonu-taemong.mp4 --quality high --fps 30
+
+      - name: Upload render artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hyeonu-taemong
+          path: |
+            renders/hyeonu-taemong.mp4
+            index.html
+            timeline.json
+          if-no-files-found: error
+          retention-days: 14
